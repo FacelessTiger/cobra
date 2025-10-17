@@ -1,0 +1,16 @@
+[package]
+name = "egui-cobra-shaders"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+spirv-std = { workspace = true }
+glam = { version = "0.30.8", default-features = false, features = ["libm"] }
+cobra-bindless = { path = "../cobra-bindless" }
+
+[lints]
+workspace = true

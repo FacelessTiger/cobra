@@ -1,0 +1,19 @@
+on: push
+name: Lints
+
+jobs:
+  lints:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install rustup components
+        run: rustup component add rustfmt clippy
+      # cargo version is a random command that forces the installation of rust-toolchain
+      - name: Install rust-toolchain
+        run: cargo version
+      - name: cargo fetch --locked
+        run: cargo fetch --locked
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
