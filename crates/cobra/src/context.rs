@@ -140,7 +140,7 @@ impl Context {
                         families
                             .iter()
                             .copied()
-                            .filter_map(|f| f)
+                            .flatten()
                             .map(|f| {
                                 vk::DeviceQueueCreateInfo::default()
                                     .queue_family_index(f)
