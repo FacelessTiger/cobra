@@ -13,5 +13,7 @@ jobs:
         run: cargo version
       - name: cargo fetch --locked
         run: cargo fetch --locked
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
       - name: cargo clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
