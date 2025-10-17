@@ -1,8 +1,12 @@
 [package]
 name = "egui-cobra"
+description = "egui backend for Cobra"
+categories = ["graphics", "gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+keywords.workspace = true
+repository.workspace = true
 
 [build-dependencies]
 cobra-shader-builder = { path = "../cobra-shader-builder" }

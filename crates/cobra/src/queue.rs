@@ -1,13 +1,13 @@
 use std::prelude::v1::Vec;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
     Mutex,
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
+use crate::Context;
 use crate::image::Image;
 use crate::swapchain::Swapchain;
-use crate::Context;
-use crate::{filling_span, ImageLayout};
+use crate::{ImageLayout, filling_span};
 use ash::vk;
 use log::info;
 
@@ -223,6 +223,8 @@ impl<const CAPABILITIES: u32> Queue<CAPABILITIES> {
         }
     }
 
+    // TODO: fix
+    #[allow(clippy::too_many_lines)]
     fn submit_private(
         &self,
         context: &Context,
@@ -386,10 +388,7 @@ impl<const CAPABILITIES: u32> Queue<CAPABILITIES> {
                     )
                     .unwrap()[0];
 
-                info!(
-                    "cobra::queue: Created command pool in queue with capability {}",
-                    CAPABILITIES
-                );
+                info!("cobra::queue: Created command pool in queue with capability {CAPABILITIES}");
                 CommandPool { pool, buffer }
             }
         }

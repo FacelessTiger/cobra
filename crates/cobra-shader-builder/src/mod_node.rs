@@ -1,14 +1,14 @@
 // Taken from https://github.com/Firestar99/nanite-at-home/blob/main/rust-gpu-bindless/crates/macro-utils/src/modnode.rs
 
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{TokenStreamExt, format_ident, quote};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Peekable;
 
-/// ModNode is a helper for writing a mod hierarchy for various symbols
+/// `ModNode` is a helper for writing a mod hierarchy for various symbols
 pub enum ModNode<'a, T> {
     Children(HashMap<Cow<'a, str>, ModNode<'a, T>>),
     Object(T),
@@ -88,6 +88,7 @@ impl<'a, T> ModNode<'a, T> {
         }
     }
 
+    #[allow(clippy::unused_self)]
     fn to_tokens_children(
         &self,
         children: &HashMap<Cow<'a, str>, ModNode<'a, T>>,

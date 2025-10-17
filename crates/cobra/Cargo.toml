@@ -1,8 +1,12 @@
 [package]
 name = "cobra"
+description = "An abstraction over Vulkan to try to simplify its usage"
+categories = ["graphics"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+keywords.workspace = true
+repository.workspace = true
 
 [dependencies]
 ash = "0.38.0"

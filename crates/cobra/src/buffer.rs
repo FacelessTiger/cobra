@@ -166,8 +166,8 @@ impl<T> Buffer<T> {
             ptr.cast().add(index).copy_from(
                 NonNull::new_unchecked(slice.as_ptr().cast_mut()),
                 slice.len(),
-            )
-        };
+            );
+        }
     }
 
     #[allow(clippy::len_without_is_empty)]

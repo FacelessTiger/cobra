@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use crate::context::{subresource_range, GraphicsPipeline};
+use crate::context::{GraphicsPipeline, subresource_range};
 use crate::image::Image;
 use crate::{ClearValue, ComputePipeline, Context, ImageLayout};
 use ash::vk;
@@ -172,10 +172,10 @@ impl GraphicsOnlyOutsidePass<'_> {
         func: impl FnOnce(GraphicsOnlyInsidePass),
     ) {
         fn render_attachment<T: Copy>(
-            image: &Image,
+            image: &'_ Image,
             clear_value: Option<T>,
             func: impl FnOnce(T) -> vk::ClearValue,
-        ) -> vk::RenderingAttachmentInfo {
+        ) -> vk::RenderingAttachmentInfo<'_> {
             vk::RenderingAttachmentInfo::default()
                 .image_view(image.image_view)
                 .image_layout(vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)

@@ -4,8 +4,8 @@ use cargo_gpu::spirv_builder::{
 };
 use proc_macro2::TokenStream;
 use quote::quote;
-use spirq::prelude::ExecutionModel;
 use spirq::ReflectConfig;
+use spirq::prelude::ExecutionModel;
 use std::borrow::Cow;
 use std::ffi::CString;
 use std::fs;
@@ -133,6 +133,9 @@ fn codegen_shaders<'a>(
             impl cobra::BindlessShader for #ident {
                 type ShaderType = #shader_type;
 
+                #[allow(clippy::unreadable_literal)]
+                #[allow(clippy::too_many_lines)]
+                #[allow(clippy::large_stack_arrays)]
                 fn spirv_binary(&self) -> &cobra::SpirvBinary<'static> {
                     &cobra::SpirvBinary {
                         binary: &[#(#spv_binary),*],

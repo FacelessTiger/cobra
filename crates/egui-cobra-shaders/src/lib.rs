@@ -1,6 +1,6 @@
 #![no_std]
 
-use cobra_bindless::{bindless, DevicePointer, ImageHandle, PointerType};
+use cobra_bindless::{DevicePointer, ImageHandle, PointerType, bindless};
 #[allow(unused_imports)]
 use spirv_std::num_traits::Float;
 use spirv_std::spirv;

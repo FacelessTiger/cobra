@@ -7,8 +7,8 @@ use std::sync::atomic::AtomicU32;
 use std::{
     mem::ManuallyDrop,
     sync::{
-        atomic::{AtomicU64, Ordering}, Arc,
-        Mutex,
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -73,128 +73,8 @@ impl Context {
     pub fn new(display_handle: RawDisplayHandle) -> Result<Arc<Context>, CobraInitError> {
         unsafe {
             let entry = ash::Entry::load().expect("Failed to load vulkan DLL");
-
-            let mut instance_extensions = ash_window::enumerate_required_extensions(display_handle)
-                .unwrap()
-                .to_vec();
-            instance_extensions.extend_from_slice(&[
-                vk::EXT_SURFACE_MAINTENANCE1_NAME.as_ptr(),
-                vk::KHR_GET_SURFACE_CAPABILITIES2_NAME.as_ptr(),
-            ]);
-
-            let Ok(instance) = entry.create_instance(
-                &vk::InstanceCreateInfo::default()
-                    .application_info(
-                        &vk::ApplicationInfo::default().api_version(vk::API_VERSION_1_3),
-                    )
-                    .enabled_extension_names(instance_extensions.as_slice()),
-                None,
-            ) else {
-                return Err(CobraInitError::InstanceInitialization);
-            };
-
-            let physical_devices = instance.enumerate_physical_devices().unwrap();
-            let gpu = physical_devices
-                .iter()
-                .copied()
-                .find(|&device| {
-                    let properties = instance.get_physical_device_properties(device);
-                    properties.device_type == vk::PhysicalDeviceType::DISCRETE_GPU
-                })
-                .unwrap_or(match physical_devices.first() {
-                    Some(&v) => v,
-                    None => return Err(CobraInitError::NoAvailableGpus),
-                });
-
-            let families = instance.get_physical_device_queue_family_properties(gpu);
-            let families = [
-                (vk::QueueFlags::GRAPHICS | vk::QueueFlags::COMPUTE, None),
-                (
-                    vk::QueueFlags::TRANSFER,
-                    Some(vk::QueueFlags::GRAPHICS | vk::QueueFlags::COMPUTE),
-                ),
-                (
-                    vk::QueueFlags::COMPUTE,
-                    Some(vk::QueueFlags::GRAPHICS | vk::QueueFlags::TRANSFER),
-                ),
-            ]
-            .into_iter()
-            .map(|(required, does_not_contain)| {
-                families
-                    .iter()
-                    .position(|q| {
-                        q.queue_flags.contains(required)
-                            && does_not_contain.is_none_or(|f| !q.queue_flags.contains(f))
-                    })
-                    .map(|f| u32::try_from(f).unwrap())
-            })
-            .collect::<Vec<_>>();
-            if families[0].is_none() {
-                return Err(CobraInitError::NoGraphicsQueueAvailable);
-            }
-
-            let Ok(device) = instance.create_device(
-                gpu,
-                &vk::DeviceCreateInfo::default()
-                    .queue_create_infos(
-                        families
-                            .iter()
-                            .copied()
-                            .filter_map(|f| f)
-                            .map(|f| {
-                                vk::DeviceQueueCreateInfo::default()
-                                    .queue_family_index(f)
-                                    .queue_priorities(&[1.0])
-                            })
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    )
-                    .enabled_extension_names(&[
-                        vk::KHR_SWAPCHAIN_NAME.as_ptr(),
-                        vk::KHR_MAINTENANCE5_NAME.as_ptr(),
-                        vk::EXT_SWAPCHAIN_MAINTENANCE1_NAME.as_ptr(),
-                    ])
-                    .push_next(
-                        &mut vk::PhysicalDeviceFeatures2::default()
-                            .features(
-                                vk::PhysicalDeviceFeatures::default()
-                                    .shader_sampled_image_array_dynamic_indexing(true)
-                                    .shader_storage_image_array_dynamic_indexing(true)
-                                    .shader_storage_buffer_array_dynamic_indexing(true),
-                            )
-                            .push_next(
-                                &mut vk::PhysicalDeviceVulkan12Features::default()
-                                    .timeline_semaphore(true)
-                                    .scalar_block_layout(true)
-                                    .vulkan_memory_model(true)
-                                    .descriptor_indexing(true)
-                                    .shader_storage_buffer_array_non_uniform_indexing(true)
-                                    .shader_sampled_image_array_non_uniform_indexing(true)
-                                    .shader_storage_image_array_non_uniform_indexing(true)
-                                    .runtime_descriptor_array(true)
-                                    .descriptor_binding_partially_bound(true)
-                                    .descriptor_binding_storage_buffer_update_after_bind(true)
-                                    .descriptor_binding_sampled_image_update_after_bind(true)
-                                    .descriptor_binding_storage_image_update_after_bind(true),
-                            )
-                            .push_next(
-                                &mut vk::PhysicalDeviceVulkan13Features::default()
-                                    .synchronization2(true)
-                                    .dynamic_rendering(true),
-                            )
-                            .push_next(
-                                &mut vk::PhysicalDeviceMaintenance5FeaturesKHR::default()
-                                    .maintenance5(true),
-                            )
-                            .push_next(
-                                &mut vk::PhysicalDeviceSwapchainMaintenance1FeaturesEXT::default()
-                                    .swapchain_maintenance1(true),
-                            ),
-                    ),
-                None,
-            ) else {
-                return Err(CobraInitError::DeviceCreation);
-            };
+            let (instance, gpu) = Self::create_instance_and_choose_gpu(display_handle, &entry)?;
+            let (device, families) = Self::create_device(&instance, gpu)?;
 
             let allocator = ManuallyDrop::new(
                 vk_mem::Allocator::new(vk_mem::AllocatorCreateInfo::new(&instance, &device, gpu))
@@ -253,6 +133,145 @@ impl Context {
 
     pub(crate) fn advance_timeline(&self) -> u64 {
         self.timeline_value.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    fn create_instance_and_choose_gpu(
+        display_handle: RawDisplayHandle,
+        entry: &ash::Entry,
+    ) -> Result<(ash::Instance, vk::PhysicalDevice), CobraInitError> {
+        unsafe {
+            let mut instance_extensions = ash_window::enumerate_required_extensions(display_handle)
+                .unwrap()
+                .to_vec();
+            instance_extensions.extend_from_slice(&[
+                vk::EXT_SURFACE_MAINTENANCE1_NAME.as_ptr(),
+                vk::KHR_GET_SURFACE_CAPABILITIES2_NAME.as_ptr(),
+            ]);
+
+            let Ok(instance) = entry.create_instance(
+                &vk::InstanceCreateInfo::default()
+                    .application_info(
+                        &vk::ApplicationInfo::default().api_version(vk::API_VERSION_1_3),
+                    )
+                    .enabled_extension_names(instance_extensions.as_slice()),
+                None,
+            ) else {
+                return Err(CobraInitError::InstanceInitialization);
+            };
+
+            let physical_devices = instance.enumerate_physical_devices().unwrap();
+            let gpu = physical_devices
+                .iter()
+                .copied()
+                .find(|&device| {
+                    let properties = instance.get_physical_device_properties(device);
+                    properties.device_type == vk::PhysicalDeviceType::DISCRETE_GPU
+                })
+                .unwrap_or(match physical_devices.first() {
+                    Some(&v) => v,
+                    None => return Err(CobraInitError::NoAvailableGpus),
+                });
+            Ok((instance, gpu))
+        }
+    }
+
+    fn create_device(
+        instance: &ash::Instance,
+        gpu: vk::PhysicalDevice,
+    ) -> Result<(ash::Device, Vec<Option<u32>>), CobraInitError> {
+        unsafe {
+            let families = instance.get_physical_device_queue_family_properties(gpu);
+            let families = [
+                (vk::QueueFlags::GRAPHICS | vk::QueueFlags::COMPUTE, None),
+                (
+                    vk::QueueFlags::TRANSFER,
+                    Some(vk::QueueFlags::GRAPHICS | vk::QueueFlags::COMPUTE),
+                ),
+                (
+                    vk::QueueFlags::COMPUTE,
+                    Some(vk::QueueFlags::GRAPHICS | vk::QueueFlags::TRANSFER),
+                ),
+            ]
+            .into_iter()
+            .map(|(required, does_not_contain)| {
+                families
+                    .iter()
+                    .position(|q| {
+                        q.queue_flags.contains(required)
+                            && does_not_contain.is_none_or(|f| !q.queue_flags.contains(f))
+                    })
+                    .map(|f| u32::try_from(f).unwrap())
+            })
+            .collect::<Vec<_>>();
+            if families[0].is_none() {
+                return Err(CobraInitError::NoGraphicsQueueAvailable);
+            }
+
+            let Ok(device) = instance.create_device(
+                gpu,
+                &vk::DeviceCreateInfo::default()
+                    .queue_create_infos(
+                        families
+                            .iter()
+                            .copied()
+                            .flatten()
+                            .map(|f| {
+                                vk::DeviceQueueCreateInfo::default()
+                                    .queue_family_index(f)
+                                    .queue_priorities(&[1.0])
+                            })
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    )
+                    .enabled_extension_names(&[
+                        vk::KHR_SWAPCHAIN_NAME.as_ptr(),
+                        vk::KHR_MAINTENANCE5_NAME.as_ptr(),
+                        vk::EXT_SWAPCHAIN_MAINTENANCE1_NAME.as_ptr(),
+                    ])
+                    .push_next(
+                        &mut vk::PhysicalDeviceFeatures2::default()
+                            .features(
+                                vk::PhysicalDeviceFeatures::default()
+                                    .shader_sampled_image_array_dynamic_indexing(true)
+                                    .shader_storage_image_array_dynamic_indexing(true)
+                                    .shader_storage_buffer_array_dynamic_indexing(true),
+                            )
+                            .push_next(
+                                &mut vk::PhysicalDeviceVulkan12Features::default()
+                                    .timeline_semaphore(true)
+                                    .scalar_block_layout(true)
+                                    .vulkan_memory_model(true)
+                                    .descriptor_indexing(true)
+                                    .shader_storage_buffer_array_non_uniform_indexing(true)
+                                    .shader_sampled_image_array_non_uniform_indexing(true)
+                                    .shader_storage_image_array_non_uniform_indexing(true)
+                                    .runtime_descriptor_array(true)
+                                    .descriptor_binding_partially_bound(true)
+                                    .descriptor_binding_storage_buffer_update_after_bind(true)
+                                    .descriptor_binding_sampled_image_update_after_bind(true)
+                                    .descriptor_binding_storage_image_update_after_bind(true),
+                            )
+                            .push_next(
+                                &mut vk::PhysicalDeviceVulkan13Features::default()
+                                    .synchronization2(true)
+                                    .dynamic_rendering(true),
+                            )
+                            .push_next(
+                                &mut vk::PhysicalDeviceMaintenance5FeaturesKHR::default()
+                                    .maintenance5(true),
+                            )
+                            .push_next(
+                                &mut vk::PhysicalDeviceSwapchainMaintenance1FeaturesEXT::default()
+                                    .swapchain_maintenance1(true),
+                            ),
+                    ),
+                None,
+            ) else {
+                return Err(CobraInitError::DeviceCreation);
+            };
+
+            Ok((device, families))
+        }
     }
 
     fn create_bindless_objects(

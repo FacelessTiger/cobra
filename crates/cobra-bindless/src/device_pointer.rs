@@ -1,7 +1,7 @@
 use crate::Descriptors;
 use core::marker::PhantomData;
-use spirv_std::macros::gpu_only;
 use spirv_std::ByteAddressableBuffer;
+use spirv_std::macros::gpu_only;
 
 /// Emulates a device pointer through an index into a bindless set of buffers + byte offset into the buffer at that index.
 /// Made to mimic the semantics of [`core::ptr::NonNull`]. Isn't usable until [`DevicePointer::validate`] is
