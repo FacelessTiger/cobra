@@ -1,13 +1,13 @@
 use std::prelude::v1::Vec;
 use std::sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
     Mutex,
+    atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
+use crate::Context;
 use crate::image::Image;
 use crate::swapchain::Swapchain;
-use crate::Context;
-use crate::{filling_span, ImageLayout};
+use crate::{ImageLayout, filling_span};
 use ash::vk;
 use log::info;
 

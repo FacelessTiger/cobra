@@ -1,7 +1,7 @@
 // Taken from https://github.com/Firestar99/nanite-at-home/blob/main/rust-gpu-bindless/crates/macro-utils/src/modnode.rs
 
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{TokenStreamExt, format_ident, quote};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;

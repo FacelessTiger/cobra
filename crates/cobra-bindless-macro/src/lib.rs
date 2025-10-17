@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, parse_quote, Attribute, Ident, ItemFn, PatType, Token};
+use syn::{Attribute, Ident, ItemFn, PatType, Token, parse_macro_input, parse_quote};
 
 #[proc_macro_attribute]
 pub fn bindless(attr: TokenStream, item: TokenStream) -> TokenStream {

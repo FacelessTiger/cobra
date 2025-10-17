@@ -7,8 +7,8 @@ use std::sync::atomic::AtomicU32;
 use std::{
     mem::ManuallyDrop,
     sync::{
-        atomic::{AtomicU64, Ordering}, Arc,
-        Mutex,
+        Arc, Mutex,
+        atomic::{AtomicU64, Ordering},
     },
 };
 

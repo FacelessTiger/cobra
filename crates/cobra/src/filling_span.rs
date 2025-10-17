@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use crate::context::{subresource_range, GraphicsPipeline};
+use crate::context::{GraphicsPipeline, subresource_range};
 use crate::image::Image;
 use crate::{ClearValue, ComputePipeline, Context, ImageLayout};
 use ash::vk;

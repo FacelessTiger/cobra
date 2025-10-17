@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 use std::prelude::v1::Vec;
 use std::sync::Arc;
 
-use crate::image::Image;
 use crate::Context;
+use crate::image::Image;
 use ash::vk;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
