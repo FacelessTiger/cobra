@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/cobra", "crates/cobra-bindless", "crates/cobra-bindless-macro", "crates/cobra-shader-builder", "crates/egui-cobra", "crates/egui-cobra-shaders"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+spirv-std = { git = "https://github.com/Rust-GPU/rust-gpu" }
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_arch, values("spirv"))'] }
+
+[workspace.lints.clippy]
+# cargo = "warn"
+pedantic = "warn"
+must_use_candidate = { level = "allow", priority = 1 }
+struct_field_names = { level = "allow", priority = 1 }

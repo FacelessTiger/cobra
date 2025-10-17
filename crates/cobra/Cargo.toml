@@ -1,0 +1,18 @@
+[package]
+name = "cobra"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ash = "0.38.0"
+ash-window = "0.13.0"
+vk-mem = "0.5.0"
+raw-window-handle = "0.6.2"
+thiserror = "2.0.16"
+bitflags = "2.9.4"
+cobra-bindless = { path = "../cobra-bindless" }
+log = "0.4.28" # should this be behind a feature flag?
+
+[lints]
+workspace = true

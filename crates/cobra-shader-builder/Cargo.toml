@@ -1,0 +1,18 @@
+[package]
+name = "cobra-shader-builder"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+syn = "2.0.106"
+quote = "1.0.40"
+prettyplease = "0.2.37"
+proc-macro2 = "1.0.101"
+spirq = "1.2.2"
+ash = "0.38.0"
+cargo-gpu = { git = "https://github.com/rust-gpu/cargo-gpu" }
+anyhow = "1.0.99"
+
+[lints]
+workspace = true
