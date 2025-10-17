@@ -1,8 +1,12 @@
 [package]
 name = "egui-cobra-shaders"
+description = "shaders for the Cobra egui backend"
+categories = ["graphics", "gui"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+keywords.workspace = true
+repository.workspace = true
 
 [lib]
 crate-type = ["rlib", "cdylib"]

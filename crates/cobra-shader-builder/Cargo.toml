@@ -1,8 +1,12 @@
 [package]
 name = "cobra-shader-builder"
+description = "Helper library to compile shaders for Cobra at build time"
+categories = ["graphics"]
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+keywords.workspace = true
+repository.workspace = true
 
 [dependencies]
 syn = "2.0.106"
