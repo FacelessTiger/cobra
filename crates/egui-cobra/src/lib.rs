@@ -33,6 +33,8 @@ impl Renderer {
                 START_VERTEX_LEN,
                 HeapType::DeviceUpload,
             ));
+
+            #[expect(clippy::missing_panics_doc)]
             index_buffers.push(cobra::Buffer::new(
                 context.clone(),
                 START_VERTEX_LEN
@@ -61,6 +63,9 @@ impl Renderer {
         }
     }
 
+    /// # Panics
+    /// If there is any user textures, use `image_to_sized_texture` instead.
+    /// If the updated texture breaks the bounds of an i32
     pub fn update_texture(
         &mut self,
         context: &Arc<cobra::Context>,
@@ -134,11 +139,10 @@ impl Renderer {
         if vertex_count > 0 {
             if vertex_buffer.len() < vertex_count {
                 let len = (vertex_buffer.len() * 2).at_least(vertex_count);
-                *vertex_buffer = cobra::Buffer::new(
-                    context.clone(),
-                    NonZeroUsize::new(len).unwrap(),
-                    HeapType::DeviceUpload,
-                );
+                #[expect(clippy::missing_panics_doc)]
+                let len = NonZeroUsize::new(len).unwrap();
+
+                *vertex_buffer = cobra::Buffer::new(context.clone(), len, HeapType::DeviceUpload);
             }
 
             // TODO: do staging once we have GPU only buffers
@@ -168,11 +172,10 @@ impl Renderer {
         if index_count > 0 {
             if index_buffer.len() < index_count {
                 let len = (index_buffer.len() * 2).at_least(index_count);
-                *index_buffer = cobra::Buffer::new(
-                    context.clone(),
-                    NonZeroUsize::new(len).unwrap(),
-                    HeapType::DeviceUpload,
-                );
+                #[expect(clippy::missing_panics_doc)]
+                let len = NonZeroUsize::new(len).unwrap();
+
+                *index_buffer = cobra::Buffer::new(context.clone(), len, HeapType::DeviceUpload);
             }
 
             // TODO: do staging once we have GPU only buffers
@@ -189,6 +192,8 @@ impl Renderer {
         }
     }
 
+    /// # Panics
+    /// If the built-in egui texture isn't set up
     pub fn render(
         &self,
         cmd: &cobra::filling_span::GraphicsOnlyInsidePass,
@@ -196,6 +201,7 @@ impl Renderer {
         target_size: impl Into<[u32; 2]>,
     ) {
         let target_size = target_size.into();
+        #[expect(clippy::cast_precision_loss)]
         let target_size_float = [target_size[0] as f32, target_size[1] as f32];
 
         let mut index_buffer_offset = 0;
@@ -256,6 +262,7 @@ struct ScissorRect {
 impl ScissorRect {
     #[allow(clippy::cast_sign_loss)]
     #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_possible_wrap)]
     fn new(clip_rect: &epaint::Rect, target_size: [u32; 2]) -> Self {
         let clip_min = clip_rect.min.round();
         let clip_min = [clip_min.x as u32, clip_min.y as u32];

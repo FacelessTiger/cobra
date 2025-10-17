@@ -10,6 +10,8 @@ pub struct Sampler {
 }
 
 impl Sampler {
+    /// # Panics
+    /// If out of device or host memory
     pub fn new(context: Arc<Context>) -> Self {
         unsafe {
             let sampler = context

@@ -73,7 +73,73 @@ impl Context {
     pub fn new(display_handle: RawDisplayHandle) -> Result<Arc<Context>, CobraInitError> {
         unsafe {
             let entry = ash::Entry::load().expect("Failed to load vulkan DLL");
+            let (instance, gpu) = Self::create_instance_and_choose_gpu(display_handle, &entry)?;
+            let (device, families) = Self::create_device(&instance, gpu)?;
 
+            let allocator = ManuallyDrop::new(
+                vk_mem::Allocator::new(vk_mem::AllocatorCreateInfo::new(&instance, &device, gpu))
+                    .unwrap(),
+            );
+            let graphics_queue = Queue::new(
+                &device,
+                device.get_device_queue(families[0].unwrap(), 0),
+                families[0].unwrap(),
+            );
+            let transfer_queue =
+                families[1].map(|f| Queue::new(&device, device.get_device_queue(f, 0), f));
+            let compute_queue =
+                families[2].map(|f| Queue::new(&device, device.get_device_queue(f, 0), f));
+
+            let (descriptor_pool, descriptor_set_layout, descriptor_set, pipeline_layout) =
+                Self::create_bindless_objects(&device);
+            let surface_khr = ash::khr::surface::Instance::new(&entry, &instance);
+            let swapchain_khr = ash::khr::swapchain::Device::new(&instance, &device);
+
+            Ok(Arc::new(Context {
+                entry,
+                instance,
+                gpu,
+                device,
+                surface_khr,
+                swapchain_khr,
+                allocator,
+                graphics_queue,
+                transfer_queue,
+                compute_queue,
+                descriptor_pool,
+                descriptor_set_layout,
+                descriptor_set,
+                pipeline_layout,
+
+                timeline_value: AtomicU64::default(),
+                deletion_queue: Mutex::default(),
+                storage_handle: BindlessHandle::default(),
+                sampled_image_handle: BindlessHandle::default(),
+                storage_image_handle: BindlessHandle::default(),
+                sampler_handle: BindlessHandle::default(),
+            }))
+        }
+    }
+
+    pub fn graphics_queue(&self) -> &GraphicsQueue {
+        &self.graphics_queue
+    }
+    pub fn transfer_queue(&self) -> Option<&TransferQueue> {
+        self.transfer_queue.as_ref()
+    }
+    pub fn compute_queue(&self) -> Option<&ComputeQueue> {
+        self.compute_queue.as_ref()
+    }
+
+    pub(crate) fn advance_timeline(&self) -> u64 {
+        self.timeline_value.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    fn create_instance_and_choose_gpu(
+        display_handle: RawDisplayHandle,
+        entry: &ash::Entry,
+    ) -> Result<(ash::Instance, vk::PhysicalDevice), CobraInitError> {
+        unsafe {
             let mut instance_extensions = ash_window::enumerate_required_extensions(display_handle)
                 .unwrap()
                 .to_vec();
@@ -105,7 +171,15 @@ impl Context {
                     Some(&v) => v,
                     None => return Err(CobraInitError::NoAvailableGpus),
                 });
+            Ok((instance, gpu))
+        }
+    }
 
+    fn create_device(
+        instance: &ash::Instance,
+        gpu: vk::PhysicalDevice,
+    ) -> Result<(ash::Device, Vec<Option<u32>>), CobraInitError> {
+        unsafe {
             let families = instance.get_physical_device_queue_family_properties(gpu);
             let families = [
                 (vk::QueueFlags::GRAPHICS | vk::QueueFlags::COMPUTE, None),
@@ -196,63 +270,8 @@ impl Context {
                 return Err(CobraInitError::DeviceCreation);
             };
 
-            let allocator = ManuallyDrop::new(
-                vk_mem::Allocator::new(vk_mem::AllocatorCreateInfo::new(&instance, &device, gpu))
-                    .unwrap(),
-            );
-            let graphics_queue = Queue::new(
-                &device,
-                device.get_device_queue(families[0].unwrap(), 0),
-                families[0].unwrap(),
-            );
-            let transfer_queue =
-                families[1].map(|f| Queue::new(&device, device.get_device_queue(f, 0), f));
-            let compute_queue =
-                families[2].map(|f| Queue::new(&device, device.get_device_queue(f, 0), f));
-
-            let (descriptor_pool, descriptor_set_layout, descriptor_set, pipeline_layout) =
-                Self::create_bindless_objects(&device);
-            let surface_khr = ash::khr::surface::Instance::new(&entry, &instance);
-            let swapchain_khr = ash::khr::swapchain::Device::new(&instance, &device);
-
-            Ok(Arc::new(Context {
-                entry,
-                instance,
-                gpu,
-                device,
-                surface_khr,
-                swapchain_khr,
-                allocator,
-                graphics_queue,
-                transfer_queue,
-                compute_queue,
-                descriptor_pool,
-                descriptor_set_layout,
-                descriptor_set,
-                pipeline_layout,
-
-                timeline_value: AtomicU64::default(),
-                deletion_queue: Mutex::default(),
-                storage_handle: BindlessHandle::default(),
-                sampled_image_handle: BindlessHandle::default(),
-                storage_image_handle: BindlessHandle::default(),
-                sampler_handle: BindlessHandle::default(),
-            }))
+            Ok((device, families))
         }
-    }
-
-    pub fn graphics_queue(&self) -> &GraphicsQueue {
-        &self.graphics_queue
-    }
-    pub fn transfer_queue(&self) -> Option<&TransferQueue> {
-        self.transfer_queue.as_ref()
-    }
-    pub fn compute_queue(&self) -> Option<&ComputeQueue> {
-        self.compute_queue.as_ref()
-    }
-
-    pub(crate) fn advance_timeline(&self) -> u64 {
-        self.timeline_value.fetch_add(1, Ordering::SeqCst) + 1
     }
 
     fn create_bindless_objects(
