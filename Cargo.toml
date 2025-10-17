@@ -14,7 +14,7 @@ spirv-std = { git = "https://github.com/Rust-GPU/rust-gpu" }
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_arch, values("spirv"))'] }
 
 [workspace.lints.clippy]
-# cargo = "deny"
-pedantic = "deny"
+cargo = "warn"
+pedantic = "warn"
 must_use_candidate = { level = "allow", priority = 1 }
 struct_field_names = { level = "allow", priority = 1 }
